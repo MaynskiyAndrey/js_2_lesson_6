@@ -51,6 +51,18 @@ class CartItem {
 }
 
 
+const postResponse = async (url, data) => {
+	return await fetch(url, {
+		method: 'POST',
+		body: JSON.stringify(data),
+		headers: {
+			'Content-Type': 'application/json'
+		},
+	})
+};
+
+
+
 Vue.component('goods-list', {
 	props: ['goods'],
 	template: `
@@ -66,8 +78,15 @@ Vue.component('goods-item', {
     <div class="goods-item">
       <h3>{{ good.product_name }}</h3>
       <p>{{ good.price }}</p>
+	  <button @click.preventDefault="addToCart(good)">Купить</button>
     </div>
-  `
+  `,
+	methods: {
+		addToCart(prod) {
+			postResponse('/addToCart', prod).then();
+		}
+	}
+
 });
 
 Vue.component('find', {
@@ -113,6 +132,7 @@ Vue.component('cart-cmp', {
 	}
 })
 
+
 const app = new Vue({
 	el: '#app',
 	data: {
@@ -147,23 +167,66 @@ const app = new Vue({
 				xhr.send();
 			})
 		},
+		// postResponse = async (url, data) => {
+		// 	return await fetch(url, {
+		// 		method: 'POST',
+		// 		body: JSON.stringify(data),
+		// 		headers: {
+		// 			'Content-Type': 'application/json'
+		// 		},
+		// 	})
+		// },
 		filterGoods() {
 			const regexp = new RegExp(this.searchLine, 'i');
 			this.filteredGoods = this.goods.filter(good => regexp.test(good.product_name));
-		}
+		},
+		makePOSTRequest(url, data, callback) {
+			let xhr;
+
+			if (window.XMLHttpRequest) {
+				xhr = new XMLHttpRequest();
+			} else if (window.ActiveXObject) {
+				xhr = new ActiveXObject("Microsoft.XMLHTTP");
+			}
+
+			xhr.onreadystatechange = function () {
+				if (xhr.readyState === 4) {
+					callback(xhr.responseText);
+				}
+			}
+
+			xhr.open('POST', url, true);
+			xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+
+			xhr.send(data);
+		},
 	},
-	mounted() {
-		this.makeGETRequest(`${API_URL}/catalogData.json`)
-			.then((goods) => {
-				this.goods = JSON.parse(goods);
-				this.filteredGoods = JSON.parse(goods);
-			});
-		this.makeGETRequest(`${API_URL}/getBasket.json`)
-			.then((goods) => {
-				JSON.parse(goods).contents.forEach((item) => {
-					let goodsItem = new GoodsItem(item.product_name, item.price);
-					this.cart.addItem(goodsItem, item.quantity);
-				})
+	// mounted() {
+	// 	// this.makeGETRequest(`${API_URL}/catalogData.json`)
+	// 	// 	.then((goods) => {
+	// 	// 		this.goods = JSON.parse(goods);
+	// 	// 		this.filteredGoods = JSON.parse(goods);
+	// 	// 	});
+
+	// 	this.makeGETRequest(`/catalog`, (goods) => {
+	// 		this.goods = JSON.parse(goods);
+	// 		this.filteredGoods = JSON.parse(goods);
+	// 	});
+
+	// 	// this.makeGETRequest(`${API_URL}/getBasket.json`)
+	// 	// 	.then((goods) => {
+	// 	// 		JSON.parse(goods).contents.forEach((item) => {
+	// 	// 			let goodsItem = new GoodsItem(item.product_name, item.price);
+	// 	// 			this.cart.addItem(goodsItem, item.quantity);
+	// 	// 		})
+	// 	// 	})
+	// }
+	mounted: async function fetchGoods() {
+		return await fetch('/catalog')
+			.then(resp => resp.json())
+			.then(data => {
+				this.goods = data;
+				this.filteredGoods = data;
 			})
 	}
 });
