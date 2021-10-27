@@ -1,30 +1,3 @@
-let searchInput;
-const makeGETRequest = (url) => {
-	return new Promise((resolve, reject) => {
-		var xhr;
-
-		if (window.XMLHttpRequest) {
-			xhr = new XMLHttpRequest();
-		} else if (window.ActiveXObject) {
-			xhr = new ActiveXObject("Microsoft.XMLHTTP");
-		}
-
-		xhr.onreadystatechange = function () {
-			if (xhr.readyState === 4) {
-				if (xhr.status === 200) {
-					resolve(xhr.responseText);
-				}
-				else {
-					reject('Error');
-				}
-			}
-		}
-
-		xhr.open('GET', url, true);
-		xhr.send();
-	})
-}
-
 const API_URL = 'https://raw.githubusercontent.com/GeekBrainsTutorial/online-store-api/master/responses';
 
 class GoodsItem {
@@ -42,18 +15,6 @@ class Cart {
 		this.items = [];
 		this.isVisibleCart = false;
 	}
-	fetchGoods = () => {
-		makeGETRequest(`${API_URL}/getBasket.json`)
-			.then((goods) => {
-
-				JSON.parse(goods).contents.forEach((item) => {
-					let goodsItem = new GoodsItem(item.product_name, item.price);
-					let cartItem = new CartItem(goodsItem, item.quantity);
-					this.items.push(cartItem);
-				})
-			})
-	}
-
 	addItem(goodsItem, count) {
 		const newItem = new CartItem(goodsItem, count);
 		this.items.push(newItem);
@@ -158,7 +119,7 @@ const app = new Vue({
 		goods: [],
 		filteredGoods: [],
 		searchLine: '',
-		cart: null
+		cart: new Cart()
 	},
 	methods: {
 		makeGETRequest(url) {
@@ -197,7 +158,12 @@ const app = new Vue({
 				this.goods = JSON.parse(goods);
 				this.filteredGoods = JSON.parse(goods);
 			});
-		this.cart = new Cart();
-		this.cart.fetchGoods();
+		this.makeGETRequest(`${API_URL}/getBasket.json`)
+			.then((goods) => {
+				JSON.parse(goods).contents.forEach((item) => {
+					let goodsItem = new GoodsItem(item.product_name, item.price);
+					this.cart.addItem(goodsItem, item.quantity);
+				})
+			})
 	}
 });
