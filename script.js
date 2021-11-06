@@ -1,56 +1,5 @@
 const API_URL = 'https://raw.githubusercontent.com/GeekBrainsTutorial/online-store-api/master/responses';
 
-class GoodsItem {
-	constructor(product_name, price) {
-		this.product_name = product_name;
-		this.price = price;
-	}
-	render() {
-		return `<div class="goods-item"><h3>${this.product_name}</h3><p>${this.price}</p></div>`;
-	}
-}
-
-class Cart {
-	constructor() {
-		this.items = [];
-		this.isVisibleCart = false;
-	}
-	addItem(goodsItem, count) {
-		const newItem = new CartItem(goodsItem, count);
-		this.items.push(newItem);
-	}
-	removeItem(goodsItem) {
-		let index = this.items.indexOf(s => s.goodItem === goodsItem);
-		if (index > 1) {
-			this.items.slice(index, 1);
-		}
-	}
-
-	getSummCost() {
-		const result = 0;
-		this.items.reduce((item, index, array) => {
-			result += item.goodItem.price * item.count;
-		})
-
-		return result;
-	}
-}
-
-class CartItem {
-	constructor(goodsItem, quantity) {
-		this.googsItem = goodsItem;
-		this.quantity = quantity;
-	}
-
-	addItem() {
-		this.quantity++;
-	}
-	removeItem() {
-		this.quantity--;
-	}
-}
-
-
 const postResponse = async (url, data) => {
 	return await fetch(url, {
 		method: 'POST',
@@ -61,19 +10,17 @@ const postResponse = async (url, data) => {
 	})
 };
 
-
-
 Vue.component('goods-list', {
 	props: ['goods'],
 	emits: { 'add-item': null, },
 	template: `
     <div class="goods-list">
-      <goods-item v-for="good in goods" :good="good" v-on:add="addChild()"></goods-item>
+      <goods-item v-for="good in goods" :good="good" v-on:add="addChild"></goods-item>
     </div>
   `,
 	methods: {
-		addChild() {
-			this.$emit('add-item');
+		addChild(newItem) {
+			this.$emit('add-item', newItem);
 		}
 	}
 });
@@ -90,7 +37,7 @@ Vue.component('goods-item', {
   `,
 	methods: {
 		addToCart(prod) {
-			postResponse('/addToCart', prod).then(this.$emit('add'));
+			this.$emit('add', prod);
 		}
 	}
 
@@ -108,7 +55,6 @@ Vue.component('find', {
 	`
 })
 
-
 Vue.component('cart-item-cmp', {
 	props: ['item'],
 	template: `
@@ -120,34 +66,37 @@ Vue.component('cart-item-cmp', {
 	</div>`,
 })
 
-
 Vue.component('cart-cmp', {
-	props: ['obj'],
+	props: ['items'],
 	template: `
 	<div>
 		<button class="cart-button" type="button" v-on:click="changeVisibleBasket">Корзина</button>
-		<div class="cart" v-show="obj.isVisibleCart">
-			<div v-for="good in obj.items">
+		<div class="cart" v-show="isVisibleCart">
+			<div v-for="good in items">
 				<cart-item-cmp :item="good" v-on:remove-item="removeFromCart"></cart-item-cmp>
 			</div>
-			<p v-show="obj.items.length==0">Корзина пустая</p>
+			<p v-show="items.length==0">Корзина пустая</p>
 		</div>
 	</div>
 	`,
+	data() {
+		return {
+			isVisibleCart: false
+		}
+	},
 	methods: {
 		changeVisibleBasket() {
-			this.obj.isVisibleCart = !this.obj.isVisibleCart;
+			this.isVisibleCart = !this.isVisibleCart;
 		},
 		removeFromCart(cartItem) {
 			postResponse('/removeFromCart', cartItem)
 				.then(resp => resp.json())
 				.then(data => {
-					this.obj.items = data;
+					this.items = data;
 				});
 		}
 	},
 })
-
 
 const app = new Vue({
 	el: '#app',
@@ -155,7 +104,7 @@ const app = new Vue({
 		goods: [],
 		filteredGoods: [],
 		searchLine: '',
-		cart: new Cart()
+		cart: []
 	},
 	methods: {
 		makeGETRequest(url) {
@@ -207,30 +156,20 @@ const app = new Vue({
 
 			xhr.send(data);
 		},
-		onAddCartItem() {
-			fetch('/cart')
+		async onAddCartItem(good) {
+			fetch('/addToCart', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(good)
+			})
 				.then(resp => resp.json())
 				.then(data => {
-					this.cart.items = data;
+					this.cart = data;
 				});
 		}
 	},
-	// mounted:// async function fetchGoods() {
-	// 	// return await fetch('/catalog')
-	// 	// 	.then(resp => resp.json())
-	// 	// 	.then(data => {
-	// 	// 		this.goods = data;
-	// 	// 		this.filteredGoods = data;
-	// 	// 	}),
-	// 	// async function fetchCart() {
-	// 	// 	return await fetch('/cart')
-	// 	// 		.then(resp => resp.json())
-	// 	// 		.then(data => {
-	// 	// 			this.cart.items = data;
-	// 	// 		})
-
-	// 	// }
-	// //}
 	mounted: async function getData() {
 		await fetch('/catalog')
 			.then(resp => resp.json())
@@ -241,9 +180,7 @@ const app = new Vue({
 		await fetch('/cart')
 			.then(resp => resp.json())
 			.then(data => {
-				this.cart.items = data;
+				this.cart = data;
 			});
-
 	}
-	//}
 });

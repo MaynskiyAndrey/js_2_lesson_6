@@ -26,11 +26,12 @@ app.post('/addToCart', (req, res) => {
 
 			cart.push(item);
 
-			fs.writeFile('cart.json', JSON.stringify(cart), (err) => {
+			let resJson = JSON.stringify(cart);
+			fs.writeFile('cart.json', resJson, (err) => {
 				if (err) {
 					res.send('{"result": 0}');
 				} else {
-					res.send('{"result": 1}');
+					res.send(resJson);
 				}
 			})
 		}
